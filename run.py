@@ -1,11 +1,12 @@
 # coding:utf8
 # Authere: Chenfei 
-# update Date:2023/09/03
+# update Date:2024/01/10
 # function: preprocessing of structural MRI (T1w)
-# version: BIDS-smriprep:v4.0
+# update: added MIND network generation
+# version: BIDS-smriprep:v4.1
 
 
-__version__ = 'v4.0'
+__version__ = 'v4.1'
 import os
 import sys
 import nibabel as nib
@@ -29,6 +30,7 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
     option_5ttgen = args.fsl_5ttgen
     option_mni = args.MNInormalization
     freesurfer = args.freesurfer
+    mind = args.mind
     subname = 'sub-' + label
     output_dir = os.path.join(args.bids_dir, 'derivatives', 'smri_prep', subname)
     if not os.path.exists(output_dir):
@@ -168,6 +170,8 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
         parc_desikan_native_path = os.path.join(parc_image_path, 'native_desikan.mgz')
         parc_destrieux_native_path = os.path.join(parc_image_path, 'native_destrieux.mgz')
         parc_hcpmmp360_native_path = os.path.join(parc_image_path, 'native_hcpmmp360.mgz')
+        if not os.path.exists(parc_desikan_native_path):
+            logger.error('Failed to find ' + parc_desikan_native_path + ', maybe bids-freesurfer hcpmmp_conv.py is missed to performed?')
 
         # prepare LUT files
 
@@ -189,12 +193,35 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
             logger.info("found results of freesurfer post-processing, jump this step")
         else:
             logger.info("start running freesurfer post-processing")
-            run.command('labelconvert ' + parc_desikan_native_path + ' ' + parc_desikan_lut_file + ' ' + mrtrix_desikan_lut_file + ' ' + parc_desikan_native_nii_path)
-            run.command('labelconvert ' + parc_destrieux_native_path + ' ' + parc_destrieux_lut_file + ' ' + mrtrix_destrieux_lut_file + ' ' + parc_destrieux_native_nii_path)
-            run.command('labelconvert ' + parc_hcpmmp360_native_path + ' ' + parc_hcpmmp360_lut_file + ' ' + mrtrix_hcpmmp360_lut_file + ' ' + parc_hcpmmp360_native_nii_path)
+            run.command('labelconvert ' + parc_desikan_native_path + ' ' + parc_desikan_lut_file + ' ' + mrtrix_desikan_lut_file + ' ' + parc_desikan_native_nii_path, shell=True, show=True)
+            run.command('labelconvert ' + parc_destrieux_native_path + ' ' + parc_destrieux_lut_file + ' ' + mrtrix_destrieux_lut_file + ' ' + parc_destrieux_native_nii_path, shell=True, show=True)
+            run.command('labelconvert ' + parc_hcpmmp360_native_path + ' ' + parc_hcpmmp360_lut_file + ' ' + mrtrix_hcpmmp360_lut_file + ' ' + parc_hcpmmp360_native_nii_path, shell=True, show=True)
 
             # Fix the sub-cortical grey matter parcellations using FSL FIRST
-            run.command('labelsgmfix ' + parc_hcpmmp360_native_nii_path + ' ' + smri_proc_path + ' ' + mrtrix_hcpmmp360_lut_file + ' ' + parc_hcpmmp379_native_nii_path)
+            run.command('labelsgmfix ' + parc_hcpmmp360_native_nii_path + ' ' + smri_proc_path + ' ' + mrtrix_hcpmmp360_lut_file + ' ' + parc_hcpmmp379_native_nii_path, shell=True, show=True)
+        
+    if mind:
+        logger.info("start running MIND network")
+        freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
+        if not os.path.exists(freesurfer_path):
+            logger.error("Failed to detect /derivatives/freesurfer for subject " + label)
+
+        parc_image_path = os.path.join(freesurfer_path, 'mri') 
+        sys.path.insert(1, '/MIND')
+        from MIND import compute_MIND
+
+        ## Specify features to include in MIND calculation. The following abbreviations specifies the ?h.thickness, ?h.curv, ?h.volume, ?h.sulc, and ?h.area Freesurfer surface features.
+        features = ['CT','MC','Vol','SD','SA']
+
+        ## Select which parcellation to use. This has been tested on Desikan Killiany (DK), HCP-Glasser, DK-308 and DK-318 parcellations.
+        parcellation_ls  =  mind # atlas, ['aparc', 'aparc.a2009s', 'aparc.DKTatlas', 'HCPMMP1']
+        for parcellation in parcellation_ls:
+            logger.info("MIND network for " + parcellation)
+            MIND = compute_MIND(freesurfer_path, features, parcellation)
+            mind = pd.DataFrame(MIND)
+            output_file_path = os.path.join(output_dir, 'MIND_network_' + parcellation + '.csv')
+            mind.to_csv(output_file_path, index=False)
+            logger.info("MIND network saved in " + output_file_path + " for " + parcellation)
 
     logger.info('Finished participant-level analysis for subject \'' + label + '\'')
     
@@ -218,6 +245,7 @@ parser.add_argument('--session_label', help='The label of the session that shoul
 parser.add_argument("-fsl_5ttgen", action="store_true", help="run 5ttgen fsl. default: False", default=False)
 parser.add_argument("-MNInormalization", action="store_true", help="run MNInormalization to MNI152NLin2009cAsym template. default: False", default=False)
 parser.add_argument("-freesurfer", action="store_true", help="generate freesurfer parcellation in nifti format. default: False", default=False)
+parser.add_argument("-mind", nargs="+", help="generate MIND network. default: False", default=False)
 parser.add_argument('-v', '--version', action='version',
                     version='BIDS-App version {}'.format(__version__))
 parser.add_argument("-cleanup", action="store_true",

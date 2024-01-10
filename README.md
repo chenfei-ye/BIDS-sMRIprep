@@ -3,12 +3,13 @@
 # BIDS-sMRIprep
 
 `BIDS-smriprep` is developed to perform structural brain MRI data (3D-T1w) pre-process, aiming to support following diffusion MRI analysis. Main functions include:
-- Skull Stripping(*mri_synthstrip*)
+- skull stripping(*mri_synthstrip*)
 - bias correction(*N4BiasFieldCorrection*)
 - anatomical parcellation(*mri_synthseg*)
 - spatial normalization (*MNI space by linear alignment*)
 - five tissue segmentation (*5ttgen from MRtrix3*)
 - label conversion from FreeSurfer derivatives
+- [cortical similarity networks (MIND)](https://doi.org/10.1038/s41593-023-01376-7) creation
 - quality control
 
 The input data should be arranged according to [BIDS format](https://bids.neuroimaging.io/). Input image modalities must be 3D-T1w data. 
@@ -38,8 +39,23 @@ docker build -t bids-smriprep:latest .
 ```
 
 ## Running
+### default running
 ```
 docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -MNInormalization -fsl_5ttgen -cleanup
+```
+
+### MIND network running
+use [BIDS-freesurfer](https://github.com/chenfei-ye/BIDS-freesurfer) for freesurfer data preprocessing
+```
+docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /input_bids_directory/derivatives/freesurfer:/outputs -v <localpath>/freesurfer_license.txt:/license.txt  bids-freesurfer:latest /run_fs_batch.py /bids_dataset /outputs participant --skip_bids_validator
+```
+mapping to hcpmmp atlas
+```
+docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /<localpath>/freesurfer_license.txt:/license.txt bids-freesurfer:latest /hcpmmp_conv.py /bids_dataset participant 
+```
+creat MIND network
+```
+docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 -cleanup
 ```
 
 ## Input Argument
@@ -51,24 +67,26 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 -   `--session_label [str]`：A space delimited list of session identifiers or a single identifier (the ses- prefix can be removed)
 - `-fsl_5ttgen`：run [5ttgen](https://mrtrix.readthedocs.io/en/dev/reference/commands/5ttgen.html) mode.
 - `-MNInormalization`：perform MNI normalization using ANTs-SyN.
-- `-freesurfer`: perform label conversion from FreeSurfer derivatives. NOTE: [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. 
+- `-freesurfer`: perform label conversion from FreeSurfer derivatives. NOTE: `hcpmmp_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. 
+- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1"]`: perform [MIND network](https://doi.org/10.1038/s41593-023-01376-7) creation. `aparc`  means desikan atlas, `aparc.a2009s`  means destrieux atlas, `aparc.DKTatlas`  means DKT atlas, `HCPMMP1`  means Glasser360 atlas. NOTE: `hcpmmp_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. Additionally, optional argument `-freesurfer` should also be specified. 
 - `-v`：check version 
 - `-cleanup`: remove temporary files.
 
 
 ## Output explanation
--   log:  `<local_bids_dir>/derivatives/smri_prep/runtime.log`
--   skull stripped brain:  `<local_bids_dir>/derivatives/smri_prep/T1w_bet.nii.gz`
--   brain mask:  `<local_bids_dir>/derivatives/smri_prep/T1w_bet_mask.nii.gz`
--   synthseg parcellation label:  `<local_bids_dir>/derivatives/smri_prep/T1w_seg.nii.gz`
--   normalized T1w image: `<local_bids_dir>/derivatives/smri_prep/mniWarped.nii.gz`
--   warpping map from native to MNI space:  `<local_bids_dir>/derivatives/smri_prep/composite_warp_t1_to_mni.nii.gz`
--   warpping map from MNI to native space:  `<local_bids_dir>/derivatives/smri_prep/composite_warp_mni_to_t1.nii.gz`
--  5tt label image:  `<local_bids_dir>/derivatives/smri_prep/T1w_5tt.nii.gz`
--  desikan parcellation label: `<local_bids_dir>/derivatives/smri_prep/native_parc_desikan.nii.gz`
--  destrieux parcellation label: `<local_bids_dir>/derivatives/smri_prep/native_parc_destrieux.nii.gz`
--  hcpmmp360 parcellation label: `<local_bids_dir>/derivatives/smri_prep/native_parc_hcpmmp360.nii.gz`
--  hcpmmp379 parcellation label: `<local_bids_dir>/derivatives/smri_prep/native_parc_hcpmmp379.nii.gz`
+-   log:  `<local_bids_dir>/derivatives/smri_prep/sub-XX/runtime.log`
+-   skull stripped brain:  `<local_bids_dir>/derivatives/smri_prep/sub-XX/T1w_bet.nii.gz`
+-   brain mask:  `<local_bids_dir>/derivatives/smri_prep/sub-XX/T1w_bet_mask.nii.gz`
+-   synthseg parcellation label:  `<local_bids_dir>/derivatives/smri_prep/sub-XX/T1w_seg.nii.gz`
+-   normalized T1w image: `<local_bids_dir>/derivatives/smri_prep/sub-XX/mniWarped.nii.gz`
+-   warpping map from native to MNI space:  `<local_bids_dir>/derivatives/smri_prep/sub-XX/composite_warp_t1_to_mni.nii.gz`
+-   warpping map from MNI to native space:  `<local_bids_dir>/derivatives/smri_prep/sub-XX/composite_warp_mni_to_t1.nii.gz`
+-  5tt label image:  `<local_bids_dir>/derivatives/smri_prep/sub-XX/T1w_5tt.nii.gz`
+-  desikan parcellation label: `<local_bids_dir>/derivatives/smri_prep/sub-XX/native_parc_desikan.nii.gz`
+-  destrieux parcellation label: `<local_bids_dir>/derivatives/smri_prep/sub-XX/native_parc_destrieux.nii.gz`
+-  hcpmmp360 parcellation label: `<local_bids_dir>/derivatives/smri_prep/sub-XX/native_parc_hcpmmp360.nii.gz`
+-  hcpmmp379 parcellation label: `<local_bids_dir>/derivatives/smri_prep/sub-XX/native_parc_hcpmmp379.nii.gz`
+- MIND network: `<local_bids_dir>/derivatives/smri_prep/sub-XX/MIND_network_XXX.csv`
 
 ## Sources
 - `SynthStrip`: a skull-stripping tool that extracts brain voxels from a landscape of image types, [check details](https://surfer.nmr.mgh.harvard.edu/docs/synthstrip/)

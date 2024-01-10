@@ -9,6 +9,7 @@
 - 空间标准化 (*MNI space by linear alignment*)
 - 脑组织分割 (*5ttgen from MRtrix3*)
 - 基于FreeSurfer输出结果的nifti转档
+- [MIND脑形态网络](https://doi.org/10.1038/s41593-023-01376-7)生成
 - 质控
 
 数据需要符合[Brain Imaging Data Structure](http://bids.neuroimaging.io/) (BIDS)格式。
@@ -45,8 +46,23 @@ docker build -t bids-smriprep:latest .
 
 
 ## 运行
+### 默认运行
 ```
 docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -MNInormalization -fsl_5ttgen -cleanup
+```
+
+### MIND脑形态网络计算
+使用 [BIDS-freesurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 进行`FreeSurfer`分割
+```
+docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /input_bids_directory/derivatives/freesurfer:/outputs -v <localpath>/freesurfer_license.txt:/license.txt  bids-freesurfer:latest /run_fs_batch.py /bids_dataset /outputs participant --skip_bids_validator
+```
+映射到HCPMMP图谱
+```
+docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /<localpath>/freesurfer_license.txt:/license.txt bids-freesurfer:latest /hcpmmp_conv.py /bids_dataset participant 
+```
+MIND脑形态网络生成
+```
+docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 -cleanup
 ```
 
 
@@ -60,7 +76,8 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 -   `--session_label [str]`：指定分析同一个被试对应的某个或某几个session。比如`--session_label 01 03 05`。否则默认按顺序分析所有session。
 - `-fsl_5ttgen`：脑组织分割模式[5ttgen](https://mrtrix.readthedocs.io/en/dev/reference/commands/5ttgen.html).
 - `-MNInormalization`：MNI空间标准化（线性配准）
-- `-freesurfer`: 基于FreeSurfer输出结果的label转档. NOTE: 需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 
+- `-freesurfer`: 基于FreeSurfer输出结果的label转档. NOTE: 需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`hcpmmp_conv.py`脚本
+- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1"]`: 生成MIND脑形态网络. `aparc`  = desikan atlas, `aparc.a2009s`  = destrieux atlas, `aparc.DKTatlas`  = DKT atlas, `HCPMMP1`  = Glasser360 atlas. NOTE:  需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`hcpmmp_conv.py`脚本，且同时携带 `-freesurfer` 参数
 - `-v`：版本查看
 - `-cleanup`: 移除临时文件
 
@@ -79,6 +96,7 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 -  destrieux图谱的分割标签: `<local_bids_dir>/derivatives/smri_prep/native_parc_destrieux.nii.gz`
 -  hcpmmp360图谱的分割标签: `<local_bids_dir>/derivatives/smri_prep/native_parc_hcpmmp360.nii.gz`
 -  hcpmmp379图谱的分割标签: `<local_bids_dir>/derivatives/smri_prep/native_parc_hcpmmp379.nii.gz`
+- MIND脑形态网络: `<local_bids_dir>/derivatives/smri_prep/sub-XX/MIND_network_XXX.csv`
 
 ## Copyright
 Copyright © chenfei.ye@foxmail.com
