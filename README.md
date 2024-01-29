@@ -49,13 +49,13 @@ use [BIDS-freesurfer](https://github.com/chenfei-ye/BIDS-freesurfer) for freesur
 ```
 docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /input_bids_directory/derivatives/freesurfer:/outputs -v <localpath>/freesurfer_license.txt:/license.txt  bids-freesurfer:latest /run_fs_batch.py /bids_dataset /outputs participant --skip_bids_validator
 ```
-mapping to hcpmmp atlas
+mapping to hcpmmp and Schaefer atlas
 ```
-docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /<localpath>/freesurfer_license.txt:/license.txt bids-freesurfer:latest /hcpmmp_conv.py /bids_dataset participant 
+docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /<localpath>/freesurfer_license.txt:/license.txt bids-freesurfer:latest /surf_conv.py /bids_dataset participant 
 ```
 creat MIND network
 ```
-docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 -cleanup
+docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 schaefer100 schaefer200 schaefer400 -cleanup
 ```
 
 ## Input Argument
@@ -68,7 +68,7 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 - `-fsl_5ttgen`：run [5ttgen](https://mrtrix.readthedocs.io/en/dev/reference/commands/5ttgen.html) mode.
 - `-MNInormalization`：perform MNI normalization using ANTs-SyN.
 - `-freesurfer`: perform label conversion from FreeSurfer derivatives. NOTE: `hcpmmp_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. 
-- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1"]`: perform [MIND network](https://doi.org/10.1038/s41593-023-01376-7) creation. `aparc`  means desikan atlas, `aparc.a2009s`  means destrieux atlas, `aparc.DKTatlas`  means DKT atlas, `HCPMMP1`  means Glasser360 atlas. NOTE: `hcpmmp_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. Additionally, optional argument `-freesurfer` should also be specified. 
+- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1"]`: perform [MIND network](https://doi.org/10.1038/s41593-023-01376-7) creation. `aparc`  means desikan atlas, `aparc.a2009s`  means destrieux atlas, `aparc.DKTatlas`  means DKT atlas, `HCPMMP1`  means Glasser360 atlas, `schaefer100`  = Schaefer atlas with 100 nodes, `schaefer200`  = Schaefer atlas with 200 nodes, `schaefer400`  = Schaefer atlas with 400 nodes. NOTE: `surf_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. Additionally, optional argument `-freesurfer` should also be specified. 
 - `-v`：check version 
 - `-cleanup`: remove temporary files.
 

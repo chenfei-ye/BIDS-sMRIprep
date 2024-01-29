@@ -56,13 +56,13 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 ```
 docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /input_bids_directory/derivatives/freesurfer:/outputs -v <localpath>/freesurfer_license.txt:/license.txt  bids-freesurfer:latest /run_fs_batch.py /bids_dataset /outputs participant --skip_bids_validator
 ```
-映射到HCPMMP图谱
+映射到HCPMMP及Schaefer图谱
 ```
-docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /<localpath>/freesurfer_license.txt:/license.txt bids-freesurfer:latest /hcpmmp_conv.py /bids_dataset participant 
+docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -v /<localpath>/freesurfer_license.txt:/license.txt bids-freesurfer:latest /surf_conv.py /bids_dataset participant 
 ```
 MIND脑形态网络生成
 ```
-docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 -cleanup
+docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 schaefer100 schaefer200 schaefer400 -cleanup
 ```
 
 
@@ -77,7 +77,7 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 - `-fsl_5ttgen`：脑组织分割模式[5ttgen](https://mrtrix.readthedocs.io/en/dev/reference/commands/5ttgen.html).
 - `-MNInormalization`：MNI空间标准化（线性配准）
 - `-freesurfer`: 基于FreeSurfer输出结果的label转档. NOTE: 需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`hcpmmp_conv.py`脚本
-- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1"]`: 生成MIND脑形态网络. `aparc`  = desikan atlas, `aparc.a2009s`  = destrieux atlas, `aparc.DKTatlas`  = DKT atlas, `HCPMMP1`  = Glasser360 atlas. NOTE:  需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`hcpmmp_conv.py`脚本，且同时携带 `-freesurfer` 参数
+- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1", "schaefer100", "schaefer200", "schaefer400"]`: 生成MIND脑形态网络. `aparc`  = desikan atlas, `aparc.a2009s`  = destrieux atlas, `aparc.DKTatlas`  = DKT atlas, `HCPMMP1`  = Glasser360 atlas, `schaefer100`  = Schaefer atlas with 100 nodes, `schaefer200`  = Schaefer atlas with 200 nodes, `schaefer400`  = Schaefer atlas with 400 nodes. NOTE:  需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`surf_conv.py`脚本，且同时携带 `-freesurfer` 参数
 - `-v`：版本查看
 - `-cleanup`: 移除临时文件
 
