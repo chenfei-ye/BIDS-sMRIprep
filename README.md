@@ -55,7 +55,7 @@ docker run -it --rm --entrypoint python -v /input_bids_directory:/bids_dataset -
 ```
 creat MIND network
 ```
-docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 schaefer100 schaefer200 schaefer400 -cleanup
+docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /run.py /bids_dataset --participant_label 01 02 03 -freesurfer -mind aparc HCPMMP1 schaefer100x7 schaefer200x7 schaefer400x7 schaefer1000x7 schaefer100x17 schaefer200x17 schaefer400x17 schaefer1000x17 -cleanup
 ```
 
 ## Input Argument
@@ -68,7 +68,7 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 - `-fsl_5ttgen`：run [5ttgen](https://mrtrix.readthedocs.io/en/dev/reference/commands/5ttgen.html) mode.
 - `-MNInormalization`：perform MNI normalization using ANTs-SyN.
 - `-freesurfer`: perform label conversion from FreeSurfer derivatives. NOTE: `hcpmmp_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. 
-- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1"]`: perform [MIND network](https://doi.org/10.1038/s41593-023-01376-7) creation. `aparc`  means desikan atlas, `aparc.a2009s`  means destrieux atlas, `aparc.DKTatlas`  means DKT atlas, `HCPMMP1`  means Glasser360 atlas, `schaefer100`  = Schaefer atlas with 100 nodes, `schaefer200`  = Schaefer atlas with 200 nodes, `schaefer400`  = Schaefer atlas with 400 nodes. NOTE: `surf_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. Additionally, optional argument `-freesurfer` should also be specified. 
+- `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1", "schaefer100x7", "schaefer200x7", "schaefer400x7", "schaefer1000x7", "schaefer100x17", "schaefer200x17", "schaefer400x17", "schaefer1000x17"]`: perform [MIND network](https://doi.org/10.1038/s41593-023-01376-7) creation. `aparc`  means desikan atlas, `aparc.a2009s`  means destrieux atlas, `aparc.DKTatlas`  means DKT atlas, `HCPMMP1`  means Glasser360 atlas, `schaefer100x7`  = Schaefer atlas with 100 nodes/7 networks, `schaefer200x7`  = Schaefer atlas with 200 nodes/7 networks, `schaefer400x7`  = Schaefer atlas with 400 nodes/7 networks, `schaefer1000x7`  = Schaefer atlas with 1000 nodes/7 networks, `schaefer100x17`  = Schaefer atlas with 100 nodes/17 networks, `schaefer200x17`  = Schaefer atlas with 200 nodes/17 networks, `schaefer400x17`  = Schaefer atlas with 400 nodes/17 networks, `schaefer1000x17`  = Schaefer atlas with 1000 nodes/17 networks. NOTE: `surf_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. Additionally, optional argument `-freesurfer` should also be specified. 
 - `-v`：check version 
 - `-cleanup`: remove temporary files.
 
