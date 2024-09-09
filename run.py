@@ -1,12 +1,13 @@
 # coding:utf8
 # Authere: Chenfei 
-# update Date:2024/01/10
+# update Date:2024/09/09
 # function: preprocessing of structural MRI (T1w)
+# update: support lesion normalization
 # update: added MIND network generation
-# version: BIDS-smriprep:v4.1
+# version: BIDS-smriprep:v4.2
 
 
-__version__ = 'v4.1'
+__version__ = 'v4.2'
 import os
 import sys
 import nibabel as nib
@@ -30,6 +31,8 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
     option_5ttgen = args.fsl_5ttgen
     option_mni = args.MNInormalization
     freesurfer = args.freesurfer
+    lesion = args.lesion
+    ignoreN4 = args.ignoreN4
     mind = args.mind
     subname = 'sub-' + label
     output_dir = os.path.join(args.bids_dir, 'derivatives', 'smri_prep', subname)
@@ -38,7 +41,7 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
 
 
     logger.info('Launching participant-level analysis for subject \'' + label + '\'')
-
+    input_dir = os.path.dirname(smri_path)
     smri_img = nib.load(smri_path)
     qc_dir = os.path.join(output_dir, 'qc')
     if not os.path.exists(qc_dir):
@@ -79,16 +82,20 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
 
     # bias correction (output brain with eyes and necks)
     smri_proc_path = os.path.join(output_dir, 'T1w' + '_proc.nii.gz') 
-    logger.info('starting N4BiasFieldCorrection')
-    if os.path.exists(smri_proc_path):
-        logger.warning("found results of N4 bias correction, jump this step")
+    if ignoreN4:
+        logger.info('jump N4BiasFieldCorrection')
+        shutil.copyfile(smri_path, smri_proc_path)
     else:
-        try:
-            logger.info("start bias correction")
-            run.command('N4BiasFieldCorrection -i ' + smri_path + ' -o ' + smri_proc_path + ' -x ' + smri_mask_path)
-        except:
-            logger.warning("N4BiasFieldCorrection failed, jump this step")
-            shutil.copyfile(smri_path, smri_proc_path)
+        logger.info('starting N4BiasFieldCorrection')
+        if os.path.exists(smri_proc_path):
+            logger.warning("found results of N4 bias correction, jump this step")
+        else:
+            try:
+                logger.info("start bias correction")
+                run.command('N4BiasFieldCorrection -i ' + smri_path + ' -o ' + smri_proc_path + ' -x ' + smri_mask_path)
+            except:
+                logger.warning("N4BiasFieldCorrection failed, jump this step")
+                shutil.copyfile(smri_path, smri_proc_path)
 
     # apply mask
     smri_proc_ss_path = os.path.join(output_dir, 'T1w' + '_proc_ss.nii.gz') 
@@ -102,6 +109,10 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
     brain_mask_qc_gif = os.path.join(qc_dir, 'brain_mask_qc.gif')
     run.command('slices ' + smri_proc_path + ' ' + smri_mask_path + ' -o ' + brain_mask_qc_gif)    
 
+    if lesion:
+        lesion_nii_path = os.path.join(input_dir, subname + '_label-lesion_roi.nii.gz')
+        if not os.path.exists(lesion_nii_path):
+            logger.error("Failed to detect lesion " + lesion_nii_path)
 
     if option_mni:
         MNI152NLin2009cAsym_path = '/template/tpl-MNI152NLin2009cAsym_space-MNI_res-01_T1w_brain.nii.gz'
@@ -126,6 +137,13 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
             # MNI spatial normalization qc
             MNInorm_qc_gif = os.path.join(qc_dir, 'MNI_spatial_normalization_qc.gif')
             run.command('slices ' + os.path.join(output_dir, 'mniWarped.nii.gz') + ' ' + MNI152NLin2009cAsym_mask_path + ' -o ' + MNInorm_qc_gif)
+        
+        if lesion:
+            run.command('antsApplyTransforms -d 3 -n GenericLabel -i ' + lesion_nii_path + 
+                            ' -r ' + MNI152NLin2009cAsym_path + 
+                            ' -o ' + os.path.join(output_dir, 'mni_label-lesion_roi.nii.gz') + 
+                            ' -t ' + os.path.join(output_dir, 'mni1Warp.nii.gz') + 
+                            ' -t ' + os.path.join(output_dir, 'mni0GenericAffine.mat'))
 
 
   
@@ -246,6 +264,8 @@ parser.add_argument("-fsl_5ttgen", action="store_true", help="run 5ttgen fsl. de
 parser.add_argument("-MNInormalization", action="store_true", help="run MNInormalization to MNI152NLin2009cAsym template. default: False", default=False)
 parser.add_argument("-freesurfer", action="store_true", help="generate freesurfer parcellation in nifti format. default: False", default=False)
 parser.add_argument("-mind", nargs="+", help="generate MIND network. default: False", default=False)
+parser.add_argument("-lesion", action="store_true", help="spatial normalization for lesion. default: False", default=False)
+parser.add_argument("-ignoreN4", action="store_true", help="ignore N4biascorrection. default: False", default=False)
 parser.add_argument('-v', '--version', action='version',
                     version='BIDS-App version {}'.format(__version__))
 parser.add_argument("-cleanup", action="store_true",

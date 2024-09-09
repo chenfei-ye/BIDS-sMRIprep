@@ -69,6 +69,8 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 - `-MNInormalization`：perform MNI normalization using ANTs-SyN.
 - `-freesurfer`: perform label conversion from FreeSurfer derivatives. NOTE: `hcpmmp_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. 
 - `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1", "schaefer100x7", "schaefer200x7", "schaefer400x7", "schaefer1000x7", "schaefer100x17", "schaefer200x17", "schaefer400x17", "schaefer1000x17"]`: perform [MIND network](https://doi.org/10.1038/s41593-023-01376-7) creation. `aparc`  means desikan atlas, `aparc.a2009s`  means destrieux atlas, `aparc.DKTatlas`  means DKT atlas, `HCPMMP1`  means Glasser360 atlas, `schaefer100x7`  = Schaefer atlas with 100 nodes/7 networks, `schaefer200x7`  = Schaefer atlas with 200 nodes/7 networks, `schaefer400x7`  = Schaefer atlas with 400 nodes/7 networks, `schaefer1000x7`  = Schaefer atlas with 1000 nodes/7 networks, `schaefer100x17`  = Schaefer atlas with 100 nodes/17 networks, `schaefer200x17`  = Schaefer atlas with 200 nodes/17 networks, `schaefer400x17`  = Schaefer atlas with 400 nodes/17 networks, `schaefer1000x17`  = Schaefer atlas with 1000 nodes/17 networks. NOTE: `surf_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. Additionally, optional argument `-freesurfer` should also be specified. 
+- `-lesion`：normalization for lesion map. should be named as `sub-XXX_label-lesion_roi.nii.gz`.
+- `-ignoreN4`：jump N4BiasFieldCorrection
 - `-v`：check version 
 - `-cleanup`: remove temporary files.
 

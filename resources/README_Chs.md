@@ -78,6 +78,8 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 - `-MNInormalization`：MNI空间标准化（线性配准）
 - `-freesurfer`: 基于FreeSurfer输出结果的label转档. NOTE: 需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`hcpmmp_conv.py`脚本
 - `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1", "schaefer100x7", "schaefer200x7", "schaefer400x7", "schaefer1000x7", "schaefer100x17", "schaefer200x17", "schaefer400x17", "schaefer1000x17"]`: 生成MIND脑形态网络. `aparc`  = desikan atlas, `aparc.a2009s`  = destrieux atlas, `aparc.DKTatlas`  = DKT atlas, `HCPMMP1`  = Glasser360 atlas, `schaefer100x7`  = Schaefer atlas with 100 nodes/7 networks, `schaefer200x7`  = Schaefer atlas with 200 nodes/7 networks, `schaefer400x7`  = Schaefer atlas with 400 nodes/7 networks, `schaefer1000x7`  = Schaefer atlas with 1000 nodes/7 networks, `schaefer100x17`  = Schaefer atlas with 100 nodes/17 networks, `schaefer200x17`  = Schaefer atlas with 200 nodes/17 networks, `schaefer400x17`  = Schaefer atlas with 400 nodes/17 networks, `schaefer1000x17`  = Schaefer atlas with 1000 nodes/17 networks. NOTE:  需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`surf_conv.py`脚本，且同时携带 `-freesurfer` 参数
+- `-lesion`：病灶二值图进行标准化；命名规则参考 `sub-XXX_label-lesion_roi.nii.gz`
+- `-ignoreN4`：跳过N4BiasFieldCorrection步骤。
 - `-v`：版本查看
 - `-cleanup`: 移除临时文件
 
