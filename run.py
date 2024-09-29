@@ -1,13 +1,14 @@
 # coding:utf8
 # Authere: Chenfei 
-# update Date:2024/09/09
+# update Date:2024/09/29
 # function: preprocessing of structural MRI (T1w)
+# update: support multi session
 # update: support lesion normalization
 # update: added MIND network generation
-# version: BIDS-smriprep:v4.2
+# version: BIDS-smriprep:v4.3
 
 
-__version__ = 'v4.2'
+__version__ = 'v4.3'
 import os
 import sys
 import nibabel as nib
@@ -27,7 +28,7 @@ from loguru import logger
 from nilearn.masking import apply_mask
 from nilearn.masking import unmask
 
-def runSubject(args, label, smri_path, mrtrix_lut_dir):
+def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
     option_5ttgen = args.fsl_5ttgen
     option_mni = args.MNInormalization
     freesurfer = args.freesurfer
@@ -35,12 +36,16 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
     ignoreN4 = args.ignoreN4
     mind = args.mind
     subname = 'sub-' + label
-    output_dir = os.path.join(args.bids_dir, 'derivatives', 'smri_prep', subname)
+    if session_label:
+        output_dir = os.path.join(args.bids_dir, 'derivatives', 'smri_prep', subname,  'ses-' + session_label)
+        logger.info('Launching participant-level analysis for subject \'' + label + '\'' + ' and session \'' + session_label + '\'')
+    else:
+        output_dir = os.path.join(args.bids_dir, 'derivatives', 'smri_prep', subname)
+        logger.info('Launching participant-level analysis for subject \'' + label + '\'')
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        path.make_dir(output_dir)
 
 
-    logger.info('Launching participant-level analysis for subject \'' + label + '\'')
     input_dir = os.path.dirname(smri_path)
     smri_img = nib.load(smri_path)
     qc_dir = os.path.join(output_dir, 'qc')
@@ -179,7 +184,10 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
             shutil.rmtree(t1_5tt_scratch_dir)
     
     if freesurfer:
-        freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
+        if session_label:
+            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label + 'ses-' + session_label)
+        else:
+            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
         if not os.path.exists(freesurfer_path):
             logger.error("Failed to detect /derivatives/freesurfer for subject " + label)
         
@@ -220,7 +228,10 @@ def runSubject(args, label, smri_path, mrtrix_lut_dir):
         
     if mind:
         logger.info("start running MIND network")
-        freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
+        if session_label:
+            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label + 'ses-' + session_label)
+        else:
+            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
         if not os.path.exists(freesurfer_path):
             logger.error("Failed to detect /derivatives/freesurfer for subject " + label)
 
@@ -313,11 +324,23 @@ subjects_to_analyze.sort()
 # running participant level
 # find all smri 
 for subject_label in subjects_to_analyze:
-    smri = [f.path for f in layout.get(subject=subject_label,
-                                        suffix='T1w',
-                                        extension=["nii.gz", "nii"],
-                                        **session_to_analyze)]      
-    runSubject(args, subject_label, smri[0], mrtrix_lut_dir)
+    smri = [f.path for f in layout.get(subject=subject_label,suffix='T1w',extension=["nii.gz", "nii"],**session_to_analyze)]      
+    
+    if os.path.normpath(smri[0]).split(os.sep)[-3].split("-")[0] == 'ses':
+        sessions = [os.path.normpath(t1).split(os.sep)[-3].split("-")[-1] for t1 in smri]
+        sessions.sort()
+    else:
+        sessions = []
+
+    if sessions:
+        for s in range(len(sessions)):  
+            session_label = sessions[s]
+            smri_analyze = [f.path for f in layout.get(subject=subject_label,session=session_label, suffix='T1w',extension=["nii.gz", "nii"],**session_to_analyze)][0]
+            runSubject(args, subject_label, session_label, smri_analyze, mrtrix_lut_dir)
+    else:
+        session_label = []
+        smri_analyze = smri[0]
+        runSubject(args, subject_label, session_label, smri_analyze, mrtrix_lut_dir)
 
 
 end = time.time()
