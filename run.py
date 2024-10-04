@@ -335,7 +335,7 @@ for subject_label in subjects_to_analyze:
     if sessions:
         for s in range(len(sessions)):  
             session_label = sessions[s]
-            smri_analyze = [f.path for f in layout.get(subject=subject_label,session=session_label, suffix='T1w',extension=["nii.gz", "nii"],**session_to_analyze)][0]
+            smri_analyze = [f.path for f in layout.get(subject=subject_label,session=session_label, suffix='T1w',extension=["nii.gz", "nii"])][0]
             runSubject(args, subject_label, session_label, smri_analyze, mrtrix_lut_dir)
     else:
         session_label = []
