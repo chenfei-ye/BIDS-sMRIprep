@@ -1,14 +1,15 @@
 # coding:utf8
 # Authere: Chenfei 
-# update Date:2024/09/29
+# update Date:2024/10/09
 # function: preprocessing of structural MRI (T1w)
+# update: support 5tt image with manual lesion
 # update: support multi session
 # update: support lesion normalization
 # update: added MIND network generation
-# version: BIDS-smriprep:v4.3
+# version: BIDS-smriprep:v4.4
 
 
-__version__ = 'v4.3'
+__version__ = 'v4.4'
 import os
 import sys
 import nibabel as nib
@@ -29,7 +30,7 @@ from nilearn.masking import apply_mask
 from nilearn.masking import unmask
 
 def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
-    option_5ttgen = args.fsl_5ttgen
+    option_5ttgen = args.hsvs_5ttgen
     option_mni = args.MNInormalization
     freesurfer = args.freesurfer
     lesion = args.lesion
@@ -64,6 +65,7 @@ def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
     resample_nii = os.path.join(output_dir, prefix + '_seg_iso.nii.gz')
     output_seg = os.path.join(output_dir, prefix + '_seg.nii.gz')
     if not os.path.exists(output_seg):
+        logger.info("start mri_synthseg")
         synthseg_cmd = 'mri_synthseg --i ' + smri_path + ' --resample ' + resample_nii + ' --parc --robust --vol ' + vol_csv + ' --qc ' + qc_csv + ' --threads 36 --o ' + output_seg
         run.command(synthseg_cmd)
     # check if resample_nii_path exists. If not, copy one 
@@ -115,7 +117,10 @@ def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
     run.command('slices ' + smri_proc_path + ' ' + smri_mask_path + ' -o ' + brain_mask_qc_gif)    
 
     if lesion:
-        lesion_nii_path = os.path.join(input_dir, subname + '_label-lesion_roi.nii.gz')
+        if session_label:
+            lesion_nii_path = os.path.join(input_dir, subname + '_ses-' + session_label+ '_T1w_label-lesion_roi.nii.gz')
+        else:
+            lesion_nii_path = os.path.join(input_dir, subname + '_T1w_label-lesion_roi.nii.gz')
         if not os.path.exists(lesion_nii_path):
             logger.error("Failed to detect lesion " + lesion_nii_path)
 
@@ -150,7 +155,17 @@ def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
                             ' -t ' + os.path.join(output_dir, 'mni1Warp.nii.gz') + 
                             ' -t ' + os.path.join(output_dir, 'mni0GenericAffine.mat'))
 
-
+    if freesurfer or option_5ttgen or mind:
+        if session_label:
+            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label + '_ses-' + session_label)
+            if not os.path.exists(freesurfer_path):
+                freesurfer_nosession_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
+                logger.warning("Failed to detect freesurfer_path: " + freesurfer_path + ' Try to search ' + freesurfer_nosession_path)
+                freesurfer_path = freesurfer_nosession_path
+        else:
+            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
+        if not os.path.exists(freesurfer_path):
+            logger.error("Failed to detect freesurfer_path: " + freesurfer_path)
   
     if option_5ttgen:
         t1_5tt_path = os.path.join(output_dir, 'T1w_5tt.nii.gz')
@@ -159,38 +174,40 @@ def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
             logger.info("found results of 5ttgen, jump this step")
         else:
             logger.info("start running 5ttgen")
-            if not os.path.exists(t1_5tt_scratch_dir):
-                os.mkdir(t1_5tt_scratch_dir)
-            run.command('5ttgen fsl ' + smri_proc_ss_path + ' ' + t1_5tt_path + 
-                        ' -premasked -nocrop -sgm_amyg_hipp -nocleanup -scratch ' + t1_5tt_scratch_dir)
-            # 5tt qc
-            T1_5tt_corticalGM_qc_gif = os.path.join(qc_dir, 'T1w_5tt_corticalGM_qc.gif')
-            T1_5tt_subcorticalGM_qc_gif = os.path.join(qc_dir, 'T1w_5tt_subcorticalGM_qc.gif')
-            T1_5tt_WM_qc_gif = os.path.join(qc_dir, 'T1w_5tt_WM_qc.gif')
-            T1_5tt_CSF_qc_gif = os.path.join(qc_dir, 'T1w_5tt_CSF_qc.gif')
-            T1_5tt_lesion_qc_gif = os.path.join(qc_dir, 'T1w_5tt_lesion_qc.gif')
-            run.command('fslsplit ' + t1_5tt_path + ' ' + os.path.join(output_dir, 'T1w_5tt'))
-            run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0000.nii.gz') + 
-              ' -o ' + T1_5tt_corticalGM_qc_gif)
-            run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0001.nii.gz') +
-              ' -o ' + T1_5tt_subcorticalGM_qc_gif)
-            run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0002.nii.gz') +
-              ' -o ' + T1_5tt_WM_qc_gif)
-            run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0003.nii.gz') +
-              ' -o ' + T1_5tt_CSF_qc_gif)
-            run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0004.nii.gz') +
-                            ' -o ' + T1_5tt_lesion_qc_gif)
+            # if not os.path.exists(t1_5tt_scratch_dir):
+            #     logger.info("create t1_5tt_scratch_dir")
+            #     os.mkdir(t1_5tt_scratch_dir)
+            # run.command('5ttgen hsvs ' + freesurfer_path + ' ' + smri_proc_ss_path + ' ' + t1_5tt_path + ' -premasked -nocrop -sgm_amyg_hipp -nocleanup -scratch ' + t1_5tt_scratch_dir + ' -template' + smri_proc_ss_path)
+            subprocess.run(['5ttgen hsvs ' + freesurfer_path  + ' ' + t1_5tt_path + ' -nocrop -nocleanup -scratch ' + t1_5tt_scratch_dir + ' -template ' + smri_proc_ss_path], check=True, shell=True)
+            
+            if lesion:
+                logger.info("updating all tisue types to contain lesion information")
+                # run.command('5ttedit  ' + t1_5tt_path + ' -path ' + t1_5tt_path + ' -force ')
+                subprocess.run(['5ttedit  ' + t1_5tt_path + ' -path ' + lesion_nii_path + ' ' + t1_5tt_path + ' -force '], check=True, shell=True)
+            
+            # # 5tt qc
+            # T1_5tt_corticalGM_qc_gif = os.path.join(qc_dir, 'T1w_5tt_corticalGM_qc.gif')
+            # T1_5tt_subcorticalGM_qc_gif = os.path.join(qc_dir, 'T1w_5tt_subcorticalGM_qc.gif')
+            # T1_5tt_WM_qc_gif = os.path.join(qc_dir, 'T1w_5tt_WM_qc.gif')
+            # T1_5tt_CSF_qc_gif = os.path.join(qc_dir, 'T1w_5tt_CSF_qc.gif')
+            # T1_5tt_lesion_qc_gif = os.path.join(qc_dir, 'T1w_5tt_lesion_qc.gif')
+            # run.command('fslsplit ' + t1_5tt_path + ' ' + os.path.join(output_dir, 'T1w_5tt'))
+            # run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0000.nii.gz') + 
+            #   ' -o ' + T1_5tt_corticalGM_qc_gif)
+            # run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0001.nii.gz') +
+            #   ' -o ' + T1_5tt_subcorticalGM_qc_gif)
+            # run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0002.nii.gz') +
+            #   ' -o ' + T1_5tt_WM_qc_gif)
+            # run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0003.nii.gz') +
+            #   ' -o ' + T1_5tt_CSF_qc_gif)
+            # run.command('slices ' + smri_proc_path + ' ' + os.path.join(output_dir, 'T1w_5tt0004.nii.gz') +
+            #                 ' -o ' + T1_5tt_lesion_qc_gif)
 
-            shutil.rmtree(t1_5tt_scratch_dir)
+            # shutil.rmtree(t1_5tt_scratch_dir)
     
-    if freesurfer:
-        if session_label:
-            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label + 'ses-' + session_label)
-        else:
-            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
-        if not os.path.exists(freesurfer_path):
-            logger.error("Failed to detect /derivatives/freesurfer for subject " + label)
-        
+
+
+    if freesurfer:    
         parc_image_path = os.path.join(freesurfer_path, 'mri') 
 
         parc_desikan_native_path = os.path.join(parc_image_path, 'native_desikan.mgz')
@@ -228,12 +245,6 @@ def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
         
     if mind:
         logger.info("start running MIND network")
-        if session_label:
-            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label + 'ses-' + session_label)
-        else:
-            freesurfer_path = os.path.join(args.bids_dir, 'derivatives', 'freesurfer', 'sub-' + label)
-        if not os.path.exists(freesurfer_path):
-            logger.error("Failed to detect /derivatives/freesurfer for subject " + label)
 
         parc_image_path = os.path.join(freesurfer_path, 'mri') 
         sys.path.insert(1, '/MIND')
@@ -256,7 +267,7 @@ def runSubject(args, label, session_label, smri_path, mrtrix_lut_dir):
     
 
 parser = argparse.ArgumentParser(description='sMRI preprocessing toolkit, including skull stripping, '
-                    'synthseg segmentation, MNI normalization, fsl_5ttgen')
+                    'synthseg segmentation, MNI normalization, 5ttgen')
 parser.add_argument('bids_dir', help='The directory with the input dataset '
                     'formatted according to the BIDS standard.')
 parser.add_argument('--participant_label', help='The label(s) of the participant(s) that should be analyzed. The label '
@@ -271,7 +282,7 @@ parser.add_argument('--session_label', help='The label of the session that shoul
                     'provided, all sessions should be analyzed. Multiple '
                     'sessions can be specified with a space separated list.',
                     nargs="+")
-parser.add_argument("-fsl_5ttgen", action="store_true", help="run 5ttgen fsl. default: False", default=False)
+parser.add_argument("-hsvs_5ttgen", action="store_true", help="run 5ttgen hsvs. default: False", default=False)
 parser.add_argument("-MNInormalization", action="store_true", help="run MNInormalization to MNI152NLin2009cAsym template. default: False", default=False)
 parser.add_argument("-freesurfer", action="store_true", help="generate freesurfer parcellation in nifti format. default: False", default=False)
 parser.add_argument("-mind", nargs="+", help="generate MIND network. default: False", default=False)

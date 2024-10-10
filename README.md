@@ -7,7 +7,7 @@
 - bias correction(*N4BiasFieldCorrection*)
 - anatomical parcellation(*mri_synthseg*)
 - spatial normalization (*MNI space by linear alignment*)
-- five tissue segmentation (*5ttgen from MRtrix3*)
+- five tissue segmentation (*hsvs-5ttgen from MRtrix3*)
 - label conversion from FreeSurfer derivatives
 - [cortical similarity networks (MIND)](https://doi.org/10.1038/s41593-023-01376-7) creation
 - quality control
@@ -65,11 +65,11 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 ####   optional argument:
 -   `--participant_label [str]`：A space delimited list of participant identifiers or a single identifier (the sub- prefix can be removed)
 -   `--session_label [str]`：A space delimited list of session identifiers or a single identifier (the ses- prefix can be removed)
-- `-fsl_5ttgen`：run [5ttgen](https://mrtrix.readthedocs.io/en/dev/reference/commands/5ttgen.html) mode.
+- `-hsvs_5ttgen`：run [5ttgen hsvs](https://mrtrix.readthedocs.io/en/latest/reference/commands/5ttgen.html#ttgen-hsvs) mode, required freesurfer conducted before.
 - `-MNInormalization`：perform MNI normalization using ANTs-SyN.
 - `-freesurfer`: perform label conversion from FreeSurfer derivatives. NOTE: `hcpmmp_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. 
 - `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1", "schaefer100x7", "schaefer200x7", "schaefer400x7", "schaefer1000x7", "schaefer100x17", "schaefer200x17", "schaefer400x17", "schaefer1000x17"]`: perform [MIND network](https://doi.org/10.1038/s41593-023-01376-7) creation. `aparc`  means desikan atlas, `aparc.a2009s`  means destrieux atlas, `aparc.DKTatlas`  means DKT atlas, `HCPMMP1`  means Glasser360 atlas, `schaefer100x7`  = Schaefer atlas with 100 nodes/7 networks, `schaefer200x7`  = Schaefer atlas with 200 nodes/7 networks, `schaefer400x7`  = Schaefer atlas with 400 nodes/7 networks, `schaefer1000x7`  = Schaefer atlas with 1000 nodes/7 networks, `schaefer100x17`  = Schaefer atlas with 100 nodes/17 networks, `schaefer200x17`  = Schaefer atlas with 200 nodes/17 networks, `schaefer400x17`  = Schaefer atlas with 400 nodes/17 networks, `schaefer1000x17`  = Schaefer atlas with 1000 nodes/17 networks. NOTE: `surf_conv.py` from [BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) must be ran before this command. Additionally, optional argument `-freesurfer` should also be specified. 
-- `-lesion`：normalization for lesion map. should be named as `sub-XXX_label-lesion_roi.nii.gz`.
+- `-lesion`：normalization for lesion map and 5ttgen with lesion. should be named as `sub-XXX_label-lesion_roi.nii.gz`.
 - `-ignoreN4`：jump N4BiasFieldCorrection
 - `-v`：check version 
 - `-cleanup`: remove temporary files.

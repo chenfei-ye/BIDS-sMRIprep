@@ -7,7 +7,7 @@
 - 偏置场矫正 (*N4BiasFieldCorrection*)
 - 全脑分割 (*mri_synthseg*)
 - 空间标准化 (*MNI space by linear alignment*)
-- 脑组织分割 (*5ttgen from MRtrix3*)
+- 脑组织分割 (*hsvs-5ttgen from MRtrix3*)
 - 基于FreeSurfer输出结果的nifti转档
 - [MIND脑形态网络](https://doi.org/10.1038/s41593-023-01376-7)生成
 - 质控
@@ -74,11 +74,11 @@ docker run -it --rm -v <bids_root>:/bids_dataset bids-smriprep:latest python /ru
 ####   可选参数说明：
 -   `--participant_label [str]`：指定分析某个或某几个被试。比如`--participant_label 01 03 05`。否则默认按顺序分析所有被试。
 -   `--session_label [str]`：指定分析同一个被试对应的某个或某几个session。比如`--session_label 01 03 05`。否则默认按顺序分析所有session。
-- `-fsl_5ttgen`：脑组织分割模式[5ttgen](https://mrtrix.readthedocs.io/en/dev/reference/commands/5ttgen.html).
+- `-hsvs_5ttgen`：脑组织分割模式[5ttgen-hsvs](https://mrtrix.readthedocs.io/en/latest/reference/commands/5ttgen.html#ttgen-hsvs)；该模式需要预选完成`freesurfer`分割。
 - `-MNInormalization`：MNI空间标准化（线性配准）
 - `-freesurfer`: 基于FreeSurfer输出结果的label转档. NOTE: 需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`hcpmmp_conv.py`脚本
 - `-mind ["aparc", "aparc.a2009s", "aparc.DKTatlas", "HCPMMP1", "schaefer100x7", "schaefer200x7", "schaefer400x7", "schaefer1000x7", "schaefer100x17", "schaefer200x17", "schaefer400x17", "schaefer1000x17"]`: 生成MIND脑形态网络. `aparc`  = desikan atlas, `aparc.a2009s`  = destrieux atlas, `aparc.DKTatlas`  = DKT atlas, `HCPMMP1`  = Glasser360 atlas, `schaefer100x7`  = Schaefer atlas with 100 nodes/7 networks, `schaefer200x7`  = Schaefer atlas with 200 nodes/7 networks, `schaefer400x7`  = Schaefer atlas with 400 nodes/7 networks, `schaefer1000x7`  = Schaefer atlas with 1000 nodes/7 networks, `schaefer100x17`  = Schaefer atlas with 100 nodes/17 networks, `schaefer200x17`  = Schaefer atlas with 200 nodes/17 networks, `schaefer400x17`  = Schaefer atlas with 400 nodes/17 networks, `schaefer1000x17`  = Schaefer atlas with 1000 nodes/17 networks. NOTE:  需要先运行[BIDS-FreeSurfer](https://github.com/chenfei-ye/BIDS-freesurfer) 的`surf_conv.py`脚本，且同时携带 `-freesurfer` 参数
-- `-lesion`：病灶二值图进行标准化；命名规则参考 `sub-XXX_label-lesion_roi.nii.gz`
+- `-lesion`：病灶二值图进行标准化，以及5ttgen的病灶图融合；命名规则参考 `sub-XXX_label-lesion_roi.nii.gz`
 - `-ignoreN4`：跳过N4BiasFieldCorrection步骤。
 - `-v`：版本查看
 - `-cleanup`: 移除临时文件
